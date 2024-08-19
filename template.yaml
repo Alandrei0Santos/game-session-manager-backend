@@ -1,107 +1,71 @@
-# AWSTemplateFormatVersion: 2010-09-09
-# Description: >-
-#   game-session-manager
-# Transform:
-# - AWS::Serverless-2016-10-31
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Game Session Management Service
 
-# Resources:
-#   getAllItemsFunction:
-#     Type: AWS::Serverless::Function
-#     Properties:
-#       Handler: src/handlers/get-all-items.getAllItemsHandler
-#       Runtime: nodejs20.x
-#       Architectures:
-#         - x86_64
-#       MemorySize: 128
-#       Timeout: 100
-#       Description: A simple example includes a HTTP get method to get all items from a DynamoDB table.
-#       Policies:
-#         - DynamoDBCrudPolicy:
-#             TableName: !Ref SampleTable
-#       Environment:
-#         Variables:
-#           SAMPLE_TABLE: !Ref SampleTable
-#       Events:
-#         Api:
-#           Type: Api
-#           Properties:
-#             Path: /
-#             Method: GET
+Resources:
+  GameSessionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: hostname
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sessionId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+        - IndexName: HostnameIndex
+          KeySchema:
+            - AttributeName: hostname
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
 
-#   getByIdFunction:
-#     Type: AWS::Serverless::Function
-#     Properties:
-#       Handler: src/handlers/get-by-id.getByIdHandler
-#       Runtime: nodejs20.x
-#       Architectures:
-#         - x86_64
-#       MemorySize: 128
-#       Timeout: 100
-#       Description: A simple example includes a HTTP get method to get one item by id from a DynamoDB table.
-#       Policies:
-#         - DynamoDBCrudPolicy:
-#             TableName: !Ref SampleTable
-#       Environment:
-#         Variables:
-#           SAMPLE_TABLE: !Ref SampleTable
-#       Events:
-#         Api:
-#           Type: Api
-#           Properties:
-#             Path: /{id}
-#             Method: GET
+  CreateGameSessionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/create-game-session.createGameSessionHandler
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref GameSessionTable
+      Description: Creates a new game session.
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GameSessionTable
+      Events:
+        CreateSession:
+          Type: Api
+          Properties:
+            Path: /sessions
+            Method: POST
 
-#   putItemFunction:
-#     Type: AWS::Serverless::Function
-#     Properties:
-#       Handler: src/handlers/put-item.putItemHandler
-#       Runtime: nodejs20.x
-#       Architectures:
-#         - x86_64
-#       MemorySize: 128
-#       Timeout: 100
-#       Description: A simple example includes a HTTP post method to add one item to a DynamoDB table.
-#       Policies:
-
-#         - DynamoDBCrudPolicy:
-#             TableName: !Ref SampleTable
-#       Environment:
-#         Variables:
-
-#           SAMPLE_TABLE: !Ref SampleTable
-#       Events:
-#         Api:
-#           Type: Api
-#           Properties:
-#             Path: /
-#             Method: POST
-
-#   GameSessionManagerTable:
-#     Type: AWS::DynamoDB::Table
-#     Properties:
-#       AttributeDefinitions:
-#         - AttributeName: sessionId
-#           AttributeType: S
-#         - AttributeName: hostname
-#           AttributeType: S
-#       KeySchema:
-#         - AttributeName: sessionId
-#           KeyType: HASH
-#       ProvisionedThroughput:
-#         ReadCapacityUnits: 5
-#         WriteCapacityUnits: 5
-#       GlobalSecondaryIndexes:
-#         - IndexName: HostnameIndex
-#           KeySchema:
-#             - AttributeName: hostname
-#               KeyType: HASH
-#           Projection:
-#             ProjectionType: ALL
-#           ProvisionedThroughput:
-#             ReadCapacityUnits: 5
-#             WriteCapacityUnits: 5
-
-# Outputs:
-#   WebEndpoint:
-#     Description: "API Gateway endpoint URL for Prod stage"
-#     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ListGameSessionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/list-game-sessions.listGameSessionsHandler
+      Runtime: nodejs18.x
+      Description: Creates a new game session.
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GameSessionTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref GameSessionTable
+      Events:
+        ListSessions:
+          Type: Api
+          Properties:
+            Path: /sessions
+            Method: GET
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
